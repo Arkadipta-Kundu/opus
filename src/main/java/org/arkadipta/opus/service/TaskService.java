@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -28,11 +29,23 @@ public class TaskService {
         return taskRepository.findAll();
     }
 
+    public List<Task> getAllTasksForUser(String userName) {
+        User user = userRepository.findByUserName(userName);
+        if (user != null) {
+            return user.getTasks();
+        }
+        return new ArrayList<>();
+    }
+
     public Task getTaskByID(Long id){
         return taskRepository.findById(id).orElse(null);
     }
 
-    public Task createTask(Task task){
+    public Task createTask(Task task) {
+        // Set the date if not provided
+        if (task.getDate() == null) {
+            task.setDate(LocalDateTime.now());
+        }
         return taskRepository.save(task);
     }
 

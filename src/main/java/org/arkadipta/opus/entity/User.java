@@ -20,12 +20,18 @@ public class User {
     private Long id;
 
     private String name;
-    @NonNull
+
+    @Column(unique = true , nullable = false)
     private String userName;
-    @NonNull
+
+    private List<String> roles ;
+
+    @Column(unique = true , nullable = false)
     private String email;
+
     @NonNull
     private String password;
+
 
     // One user -> many tasks
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)

@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 
 @RestController
@@ -21,18 +22,12 @@ public class TaskController {
     private UserService userService;
 
     @GetMapping
-    public List<Task> getAllTasks() {
-        return taskService.getAllTasks();
-    }
-
-    @GetMapping("/user/{userName}")
-    public ResponseEntity<List<Task>> getTasksForUser(@PathVariable String userName) {
-        List<Task> tasks = userService.getAllTasksForUser(userName);
-        if (tasks != null && !tasks.isEmpty()) {
-            return new ResponseEntity<>(tasks, HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
+    public ResponseEntity<List<Task>> getTasksForLoggedInUser(Principal principal) {
+        if (principal == null)
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        String username = principal.getName();
+        List<Task> tasks = taskService.getAllTasksForUser(username);
+        return new ResponseEntity<>(tasks, HttpStatus.OK);
     }
 
     @GetMapping("/{id}")
@@ -46,12 +41,11 @@ public class TaskController {
     }
 
     @PostMapping
-    public ResponseEntity<?> createTask(@RequestBody Task task) {
-        return new ResponseEntity<>(taskService.createTask(task), HttpStatus.CREATED);
-    }
-
-    @PostMapping("/{username}")
-    public ResponseEntity<?> createTaskForUser(@RequestBody Task task, @PathVariable String username) {
+    public ResponseEntity<?> createTask(@RequestBody Task task, Principal principal) {
+        if (principal == null) {
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
+        String username = principal.getName();
         try {
             Task createdTask = taskService.createTaskForUser(task, username);
             return new ResponseEntity<>(createdTask, HttpStatus.CREATED);
