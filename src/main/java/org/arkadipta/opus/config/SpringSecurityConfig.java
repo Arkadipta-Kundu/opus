@@ -18,15 +18,16 @@ public class SpringSecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/public/**").permitAll()
-                        .anyRequest().authenticated()
-                )   // authentication & authorization
+                        .anyRequest().authenticated()) // authentication & authorization
                 .httpBasic(Customizer.withDefaults());
 
         // If you want form login instead, you can add:
         // .formLogin(form -> form.disable()) // or configure custom login page
-        // Hook your user detail service via authentication provider implicitly (Spring Boot auto-wires it)
+        // Hook your user detail service via authentication provider implicitly (Spring
+        // Boot auto-wires it)
         return http.build();
     }
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();

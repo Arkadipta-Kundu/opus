@@ -48,6 +48,7 @@ public class AdminController {
             throw new RuntimeException(e);
         }
     }
+
     @DeleteMapping("/users/{id}")
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
         try {

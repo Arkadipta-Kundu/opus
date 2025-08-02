@@ -17,3 +17,14 @@ server.port=8080
 # Security Configuration (if needed)
 # spring.security.user.name=admin
 # spring.security.user.password=admin123
+
+# Gmail SMTP configuration 
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=your_email@gmail.com
+spring.mail.password=your_email_app_password
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+spring.mail.properties.mail.smtp.starttls.required=true
+#Optional: Test connection on startup
+spring.mail.test-connection=false

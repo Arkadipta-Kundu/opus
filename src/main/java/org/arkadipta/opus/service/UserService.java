@@ -57,4 +57,9 @@ public class UserService {
             return null;
         }
     }
+
+    public boolean isEmailVerified(String email) {
+        User user = userRepository.findByEmail(email);
+        return user != null && user.isEmailVerified();
+    }
 }

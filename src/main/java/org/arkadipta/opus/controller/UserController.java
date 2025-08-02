@@ -1,12 +1,14 @@
 package org.arkadipta.opus.controller;
 
 import org.arkadipta.opus.entity.User;
+import org.arkadipta.opus.repository.UserRepository;
 import org.arkadipta.opus.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 
 @RestController
@@ -15,6 +17,9 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @PutMapping("/{id}")
     public ResponseEntity<?> updateUser(@PathVariable long id, @RequestBody User updatedUser) {

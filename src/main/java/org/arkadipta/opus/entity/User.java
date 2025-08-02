@@ -32,9 +32,10 @@ public class User {
     @NonNull
     private String password;
 
-
     // One user -> many tasks
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<Task> tasks;
+
+    private boolean emailVerified = false;
 }
