@@ -50,11 +50,32 @@ public class EmailService {
     }
 
     public void sendResetLinkEmail(String email, String resetLink) {
-        String subject = "Password Reset Request";
-        String message = "Click the link below to reset your password:\n" + resetLink;
+            String subject = "Password Reset Request";
+            String body = "<!DOCTYPE html>" +
+                    "<html>" +
+                    "<head>" +
+                    "<style>" +
+                    "body { font-family: Arial, sans-serif; background-color: #f6f6f6; margin: 0; padding: 0; }" +
+                    ".container { background: #fff; max-width: 500px; margin: 40px auto; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }" +
+                    ".header { font-size: 22px; color: #333; margin-bottom: 20px; }" +
+                    ".link { font-size: 16px; color: #007bff; text-decoration: none; word-wrap: break-word; }" +
+                    ".footer { font-size: 13px; color: #888; margin-top: 30px; }" +
+                    "</style>" +
+                    "</head>" +
+                    "<body>" +
+                    "<div class='container'>" +
+                    "<div class='header'>Password Reset Request</div>" +
+                    "<p>Dear User,</p>" +
+                    "<p>We received a request to reset your password. Please click the link below to reset your password:</p>" +
+                    "<p><a href='" + resetLink + "' class='link'>" + resetLink + "</a></p>" +
+                    "<p>If you did not request this, please ignore this email.</p>" +
+                    "<div class='footer'>Thank you,<br/>Opus Team</div>" +
+                    "</div>" +
+                    "</body>" +
+                    "</html>";
 
-        sendHtmlEmail(email, subject, message);
-    }
+            sendHtmlEmail(email, subject, body);
+        }
 
     public void sendHtmlEmail(String to, String subject, String htmlBody) {
         MimeMessage message = mailSender.createMimeMessage();
