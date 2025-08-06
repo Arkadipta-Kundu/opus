@@ -1,403 +1,65 @@
-# Redis Comprehensive Guide for Spring Boot
+# Cach## What is Caching?
 
-## Table of Contents
+Imagine you're looking up a phone number in a d---
 
-1. [What is Redis?](#what-is-redis)
-2. [How Redis Works](#how-redis-works)
-3. [Redis Data Types and Operations](#redis-data-types-and-operations)
-4. [Redis with Spring Boot - From Scratch](#redis-with-spring-boot---from-scratch)
-5. [Implementing Redis in Your Opus Project](#implementing-redis-in-your-opus-project)
-6. [Performance Optimization Strategies](#performance-optimization-strategies)
-7. [Best Practices](#best-practices)
+## How Caching Works in Spring Boot
 
-## What is Redis?
+Spring Boot provides a simple way to implement caching using annotations. Here's how it works:
 
-**Redis** (Remote Dictionary Server) is an open-source, in-memory data structure store that can be used as a database, cache, and message broker. It's known for its exceptional performance, supporting sub-millisecond response times.
+### The Cache Manager
 
-### Key Features:
+Spring Boot uses a `CacheManager` to handle all caching operations. Think of it as a librarian who ---
 
-- **In-Memory Storage**: Data is stored in RAM for ultra-fast access
-- **Persistence**: Optional data persistence to disk
-- **Data Structures**: Supports various data types (strings, hashes, lists, sets, etc.)
-- **Atomic Operations**: All operations are atomic
-- **Pub/Sub**: Built-in publish/subscribe messaging
-- **Clustering**: Horizontal scaling support
-- **Lua Scripting**: Server-side scripting capabilities
+## Testing Caching
 
-### Use Cases:
+Here's how caching works in practice:
 
-- **Caching**: Session storage, page caching, API response caching
-- **Real-time Analytics**: Leaderboards, counters, statistics
-- **Message Queues**: Task queues, pub/sub systems
-- **Session Management**: User sessions in web applications
-- **Rate Limiting**: API rate limiting and throttling
+### Creating a Test Controller
 
-## How Redis Works
+````java
+@RestController
+@RequestMapping("/api/users")
+public c```
 
-### Architecture
+### Step 3: Install Redis
 
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Client App    │───▶│   Redis Server   │───▶│  Optional Disk  │
-│  (Spring Boot)  │    │   (In-Memory)    │    │   Persistence   │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-```
-
-### Memory Management
-
-- **LRU Eviction**: Least Recently Used items are removed when memory is full
-- **TTL (Time To Live)**: Automatic expiration of keys
-- **Memory Optimization**: Efficient data encoding and compression
-
-### Persistence Options
-
-1. **RDB (Redis Database)**: Point-in-time snapshots
-2. **AOF (Append Only File)**: Logs every write operation
-3. **Mixed**: Combination of RDB and AOF
-
-## Redis Data Types and Operations
-
-### 1. Strings
-
-Most basic Redis data type, can store text, numbers, or binary data.
-
+**Using Docker (Recommended)**:
 ```bash
-# Set and get operations
-SET user:1000:name "John Doe"
-GET user:1000:name
+docker run -d --name redis-cache -p 6379:6379 redis:alpine
+````
 
-# Increment operations
-SET counter 100
-INCR counter          # Returns 101
-INCRBY counter 5      # Returns 106
+**Manual Installation**:
 
-# Expiration
-SETEX session:abc123 3600 "user_data"  # Expires in 1 hour
-TTL session:abc123                       # Check remaining time
-```
+- Windows: Download from https://redis.io/download
+- macOS: `brew install redis`
+- Linux: `sudo apt-get install redis-server`
 
-### 2. Hashes
+### Step 4: Configure Redis
 
-Perfect for representing objects with multiple fields.
-
-```bash
-# Set hash fields
-HMSET user:1000 name "John Doe" email "john@example.com" age 30
-
-# Get hash fields
-HGET user:1000 name
-HGETALL user:1000
-
-# Check if field exists
-HEXISTS user:1000 email
-```
-
-### 3. Lists
-
-Ordered collections of strings, useful for queues and stacks.
-
-```bash
-# Add elements
-LPUSH mylist "first"      # Add to left (beginning)
-RPUSH mylist "last"       # Add to right (end)
-
-# Get elements
-LRANGE mylist 0 -1        # Get all elements
-LPOP mylist               # Remove and return first element
-```
-
-### 4. Sets
-
-Unordered collections of unique strings.
-
-```bash
-# Add members
-SADD myset "apple" "banana" "orange"
-
-# Get members
-SMEMBERS myset
-SCARD myset               # Get count
-
-# Set operations
-SINTER set1 set2          # Intersection
-SUNION set1 set2          # Union
-```
-
-### 5. Sorted Sets
-
-Sets ordered by score, perfect for leaderboards.
-
-```bash
-# Add with scores
-ZADD leaderboard 100 "player1" 85 "player2" 92 "player3"
-
-# Get by rank
-ZRANGE leaderboard 0 2 WITHSCORES    # Top 3 players
-ZREVRANGE leaderboard 0 2            # Reverse order (highest first)
-```
-
-## Redis with Spring Boot - From Scratch
-
-### Step 1: Add Dependencies
-
-Add to your `pom.xml`:
-
-```xml
-<dependencies>
-    <!-- Spring Boot Starter Data Redis -->
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-data-redis</artifactId>
-    </dependency>
-
-    <!-- Lettuce (Redis Java client) - included by default -->
-    <!-- Or use Jedis if preferred -->
-    <dependency>
-        <groupId>redis.clients</groupId>
-        <artifactId>jedis</artifactId>
-    </dependency>
-
-    <!-- Spring Boot Cache Starter -->
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-cache</artifactId>
-    </dependency>
-
-    <!-- JSON processing for object caching -->
-    <dependency>
-        <groupId>com.fasterxml.jackson.core</groupId>
-        <artifactId>jackson-databind</artifactId>
-    </dependency>
-</dependencies>
-```
-
-### Step 2: Configure Redis Connection
-
-**application.properties:**
+Update your `application.properties`:
 
 ```properties
-# Redis Configuration
+# Redis Connection Settings
 spring.data.redis.host=localhost
 spring.data.redis.port=6379
 spring.data.redis.password=
 spring.data.redis.database=0
 spring.data.redis.timeout=60000ms
 
-# Connection Pool Settings (Lettuce)
-spring.data.redis.lettuce.pool.max-active=8
-spring.data.redis.lettuce.pool.max-idle=8
-spring.data.redis.lettuce.pool.min-idle=0
-spring.data.redis.lettuce.pool.max-wait=-1ms
-
-# Cache Configuration
-spring.cache.type=redis
-spring.cache.redis.time-to-live=600000
-spring.cache.redis.cache-null-values=false
-```
-
-### Step 3: Redis Configuration Class
-
-```java
-@Configuration
-@EnableCaching
-public class RedisConfig {
-
-    @Bean
-    public LettuceConnectionFactory redisConnectionFactory() {
-        return new LettuceConnectionFactory(
-            new RedisStandaloneConfiguration("localhost", 6379)
-        );
-    }
-
-    @Bean
-    public RedisTemplate<String, Object> redisTemplate() {
-        RedisTemplate<String, Object> template = new RedisTemplate<>();
-        template.setConnectionFactory(redisConnectionFactory());
-
-        // JSON serialization
-        Jackson2JsonRedisSerializer<Object> jackson2JsonRedisSerializer =
-            new Jackson2JsonRedisSerializer<>(Object.class);
-        ObjectMapper om = new ObjectMapper();
-        om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
-        om.activateDefaultTyping(LazyLoadingAspectSupport.AUTO_TYPE);
-        jackson2JsonRedisSerializer.setObjectMapper(om);
-
-        // Set serializers
-        template.setKeySerializer(new StringRedisSerializer());
-        template.setHashKeySerializer(new StringRedisSerializer());
-        template.setValueSerializer(jackson2JsonRedisSerializer);
-        template.setHashValueSerializer(jackson2JsonRedisSerializer);
-
-        template.afterPropertiesSet();
-        return template;
-    }
-
-    @Bean
-    public CacheManager cacheManager() {
-        RedisCacheManager.Builder builder = RedisCacheManager
-            .RedisCacheManagerBuilder
-            .fromConnectionFactory(redisConnectionFactory())
-            .cacheDefaults(cacheConfiguration());
-
-        return builder.build();
-    }
-
-    private RedisCacheConfiguration cacheConfiguration() {
-        return RedisCacheConfiguration.defaultCacheConfig()
-            .entryTtl(Duration.ofMinutes(10))
-            .disableCachingNullValues()
-            .serializeKeysWith(RedisSerializationContext.SerializationPair
-                .fromSerializer(new StringRedisSerializer()))
-            .serializeValuesWith(RedisSerializationContext.SerializationPair
-                .fromSerializer(new Jackson2JsonRedisSerializer<>(Object.class)));
-    }
-}
-```
-
-### Step 4: Using Redis for Caching
-
-#### Declarative Caching with Annotations
-
-```java
-@Service
-public class UserService {
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Cacheable(value = "users", key = "#id")
-    public User findById(Long id) {
-        return userRepository.findById(id).orElse(null);
-    }
-
-    @Cacheable(value = "users", key = "#email")
-    public User findByEmail(String email) {
-        return userRepository.findByEmail(email);
-    }
-
-    @CachePut(value = "users", key = "#user.id")
-    public User save(User user) {
-        return userRepository.save(user);
-    }
-
-    @CacheEvict(value = "users", key = "#id")
-    public void deleteById(Long id) {
-        userRepository.deleteById(id);
-    }
-
-    @CacheEvict(value = "users", allEntries = true)
-    public void clearCache() {
-        // Method implementation
-    }
-}
-```
-
-#### Programmatic Caching with RedisTemplate
-
-```java
-@Service
-public class CacheService {
-
-    @Autowired
-    private RedisTemplate<String, Object> redisTemplate;
-
-    public void setValue(String key, Object value, long timeout, TimeUnit unit) {
-        redisTemplate.opsForValue().set(key, value, timeout, unit);
-    }
-
-    public Object getValue(String key) {
-        return redisTemplate.opsForValue().get(key);
-    }
-
-    public void setHash(String key, String hashKey, Object value) {
-        redisTemplate.opsForHash().put(key, hashKey, value);
-    }
-
-    public Object getHash(String key, String hashKey) {
-        return redisTemplate.opsForHash().get(key, hashKey);
-    }
-
-    public void addToList(String key, Object value) {
-        redisTemplate.opsForList().rightPush(key, value);
-    }
-
-    public void deleteKey(String key) {
-        redisTemplate.delete(key);
-    }
-
-    public boolean hasKey(String key) {
-        return Boolean.TRUE.equals(redisTemplate.hasKey(key));
-    }
-}
-```
-
-## Implementing Redis in Your Opus Project
-
-Based on your project structure, here's how to implement Redis caching for optimal performance:
-
-### 1. Add Redis Dependencies to Your Project
-
-Add these dependencies to your existing `pom.xml`:
-
-```xml
-<!-- Add after your existing dependencies -->
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-data-redis</artifactId>
-</dependency>
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-cache</artifactId>
-</dependency>
-```
-
-### 2. Update Application Properties
-
-Add to your `application.properties`:
-
-```properties
-# Redis Configuration
-spring.data.redis.host=${REDIS_HOST:localhost}
-spring.data.redis.port=${REDIS_PORT:6379}
-spring.data.redis.password=${REDIS_PASSWORD:}
-spring.data.redis.database=0
-spring.data.redis.timeout=60000ms
-
 # Cache Configuration
 spring.cache.type=redis
 spring.cache.redis.time-to-live=600000
 spring.cache.redis.cache-null-values=false
 
-# Redis Pool Configuration
+# Connection Pool Settings
 spring.data.redis.lettuce.pool.max-active=8
 spring.data.redis.lettuce.pool.max-idle=8
 spring.data.redis.lettuce.pool.min-idle=0
 ```
 
-### 3. Create Redis Configuration
-
-Create `src/main/java/org/arkadipta/opus/config/RedisConfig.java`:
+### Step 5: Redis Configuration Class
 
 ```java
-package org.arkadipta.opus.config;
-
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.PropertyAccessor;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.cache.CacheManager;
-import org.springframework.cache.annotation.EnableCaching;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.data.redis.cache.RedisCacheConfiguration;
-import org.springframework.data.redis.cache.RedisCacheManager;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
-import org.springframework.data.redis.serializer.RedisSerializationContext;
-import org.springframework.data.redis.serializer.StringRedisSerializer;
-
-import java.time.Duration;
-
 @Configuration
 @EnableCaching
 public class RedisConfig {
@@ -407,22 +69,17 @@ public class RedisConfig {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
 
-        // JSON serialization for complex objects
-        Jackson2JsonRedisSerializer<Object> jackson2JsonRedisSerializer =
-            new Jackson2JsonRedisSerializer<>(Object.class);
+        // Use JSON serialization for objects
+        Jackson2JsonRedisSerializer<Object> serializer = new Jackson2JsonRedisSerializer<>(Object.class);
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
+        serializer.setObjectMapper(objectMapper);
 
-        ObjectMapper om = new ObjectMapper();
-        om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
-        jackson2JsonRedisSerializer.setObjectMapper(om);
-
-        // String serialization for keys
-        StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
-
-        // Set serializers
-        template.setKeySerializer(stringRedisSerializer);
-        template.setHashKeySerializer(stringRedisSerializer);
-        template.setValueSerializer(jackson2JsonRedisSerializer);
-        template.setHashValueSerializer(jackson2JsonRedisSerializer);
+        // Configure serializers
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setValueSerializer(serializer);
+        template.setHashKeySerializer(new StringRedisSerializer());
+        template.setHashValueSerializer(serializer);
 
         template.afterPropertiesSet();
         return template;
@@ -431,7 +88,7 @@ public class RedisConfig {
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
         RedisCacheConfiguration cacheConfig = RedisCacheConfiguration.defaultCacheConfig()
-            .entryTtl(Duration.ofMinutes(10)) // Default TTL: 10 minutes
+            .entryTtl(Duration.ofMinutes(10)) // Cache expires after 10 minutes
             .disableCachingNullValues()
             .serializeKeysWith(RedisSerializationContext.SerializationPair
                 .fromSerializer(new StringRedisSerializer()))
@@ -445,521 +102,82 @@ public class RedisConfig {
 }
 ```
 
-### 4. Update Your Services for Caching
+### Step 6: Use Redis for Caching
 
-#### User Service Caching
+Your existing caching annotations will now work with Redis automatically! No code changes needed.
 
-Update your existing `UserService` to include caching:
-
-```java
-package org.arkadipta.opus.service;
-
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.CachePut;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.stereotype.Service;
-
-@Service
-public class UserService {
-
-    // Your existing dependencies...
-
-    @Cacheable(value = "users", key = "#id", unless = "#result == null")
-    public User findById(Long id) {
-        return userRepository.findById(id).orElse(null);
-    }
-
-    @Cacheable(value = "users", key = "#email", unless = "#result == null")
-    public User findByEmail(String email) {
-        return userRepository.findByEmail(email);
-    }
-
-    @CachePut(value = "users", key = "#result.id")
-    public User save(User user) {
-        User savedUser = userRepository.save(user);
-        // Also cache by email
-        return savedUser;
-    }
-
-    @CacheEvict(value = "users", key = "#id")
-    public void deleteById(Long id) {
-        userRepository.deleteById(id);
-    }
-
-    @CacheEvict(value = "users", allEntries = true)
-    public void clearUserCache() {
-        // This will clear all user cache entries
-    }
-
-    // Cache user verification status
-    @Cacheable(value = "user-verification", key = "#email", unless = "#result == null")
-    public boolean isEmailVerified(String email) {
-        User user = findByEmail(email);
-        return user != null && user.isEmailVerified();
-    }
-
-    @CacheEvict(value = "user-verification", key = "#email")
-    public void clearEmailVerificationCache(String email) {
-        // Clear verification cache when status changes
-    }
-}
-```
-
-#### Task Service Caching
-
-Update your `TaskService` for caching tasks:
+### Step 7: Manual Redis Operations (Optional)
 
 ```java
-package org.arkadipta.opus.service;
-
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.CachePut;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.stereotype.Service;
-
 @Service
-public class TaskService {
-
-    // Your existing dependencies...
-
-    @Cacheable(value = "tasks", key = "#id", unless = "#result == null")
-    public Task findById(Long id) {
-        return taskRepository.findById(id).orElse(null);
-    }
-
-    @Cacheable(value = "user-tasks", key = "#userId", unless = "#result == null or #result.isEmpty()")
-    public List<Task> findTasksByUserId(Long userId) {
-        return taskRepository.findByUserId(userId);
-    }
-
-    @Cacheable(value = "task-status", key = "#status.name()", unless = "#result == null or #result.isEmpty()")
-    public List<Task> findTasksByStatus(TaskStatus status) {
-        return taskRepository.findByStatus(status);
-    }
-
-    @CachePut(value = "tasks", key = "#result.id")
-    public Task save(Task task) {
-        Task savedTask = taskRepository.save(task);
-        // Clear related caches
-        clearUserTasksCache(savedTask.getUserId());
-        clearTaskStatusCache(savedTask.getStatus());
-        return savedTask;
-    }
-
-    @CacheEvict(value = "tasks", key = "#id")
-    public void deleteById(Long id) {
-        Task task = findById(id);
-        if (task != null) {
-            taskRepository.deleteById(id);
-            clearUserTasksCache(task.getUserId());
-            clearTaskStatusCache(task.getStatus());
-        }
-    }
-
-    @CacheEvict(value = "user-tasks", key = "#userId")
-    public void clearUserTasksCache(Long userId) {
-        // Clear user-specific task cache
-    }
-
-    @CacheEvict(value = "task-status", key = "#status.name()")
-    public void clearTaskStatusCache(TaskStatus status) {
-        // Clear status-specific task cache
-    }
-
-    @CacheEvict(value = {"tasks", "user-tasks", "task-status"}, allEntries = true)
-    public void clearAllTaskCaches() {
-        // Clear all task-related caches
-    }
-}
-```
-
-#### Quote Service Caching
-
-Cache external API responses:
-
-```java
-package org.arkadipta.opus.service;
-
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.stereotype.Service;
-
-@Service
-public class QuoteService {
-
-    // Cache quotes for 1 hour (configured in cache manager)
-    @Cacheable(value = "quotes", key = "'daily-quote'")
-    public QuoteResponse getDailyQuote() {
-        // Your existing quote fetching logic
-        return fetchQuoteFromExternalAPI();
-    }
-
-    @Cacheable(value = "quotes", key = "#category")
-    public QuoteResponse getQuoteByCategory(String category) {
-        return fetchQuoteByCategory(category);
-    }
-
-    // Your existing methods...
-}
-```
-
-### 5. Session Management with Redis
-
-Create a session service for better session handling:
-
-```java
-package org.arkadipta.opus.service;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.stereotype.Service;
-
-import java.util.concurrent.TimeUnit;
-
-@Service
-public class SessionService {
+public class ManualCacheService {
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
-    private static final String SESSION_PREFIX = "session:";
-    private static final String OTP_PREFIX = "otp:";
-    private static final long SESSION_TIMEOUT = 24; // hours
-    private static final long OTP_TIMEOUT = 10; // minutes
-
-    public void createSession(String sessionId, Object userData) {
-        String key = SESSION_PREFIX + sessionId;
-        redisTemplate.opsForValue().set(key, userData, SESSION_TIMEOUT, TimeUnit.HOURS);
+    public void cacheUser(String key, User user, long timeoutMinutes) {
+        redisTemplate.opsForValue().set(key, user, timeoutMinutes, TimeUnit.MINUTES);
     }
 
-    public Object getSession(String sessionId) {
-        String key = SESSION_PREFIX + sessionId;
-        return redisTemplate.opsForValue().get(key);
+    public User getCachedUser(String key) {
+        return (User) redisTemplate.opsForValue().get(key);
     }
 
-    public void invalidateSession(String sessionId) {
-        String key = SESSION_PREFIX + sessionId;
+    public void evictUser(String key) {
         redisTemplate.delete(key);
     }
 
-    public void storeOTP(String email, String otp) {
-        String key = OTP_PREFIX + email;
-        redisTemplate.opsForValue().set(key, otp, OTP_TIMEOUT, TimeUnit.MINUTES);
-    }
-
-    public String getOTP(String email) {
-        String key = OTP_PREFIX + email;
-        return (String) redisTemplate.opsForValue().get(key);
-    }
-
-    public void clearOTP(String email) {
-        String key = OTP_PREFIX + email;
-        redisTemplate.delete(key);
-    }
-
-    public boolean isOTPValid(String email, String providedOTP) {
-        String storedOTP = getOTP(email);
-        return storedOTP != null && storedOTP.equals(providedOTP);
+    public boolean isCached(String key) {
+        return Boolean.TRUE.equals(redisTemplate.hasKey(key));
     }
 }
 ```
 
-### 6. Rate Limiting Implementation
+---
 
-Create a rate limiting service:
+## Best Practices and Tips
 
-```java
-package org.arkadipta.opus.service;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.stereotype.Service;
-
-import java.util.concurrent.TimeUnit;
-
-@Service
-public class RateLimitingService {
-
-    @Autowired
-    private RedisTemplate<String, Object> redisTemplate;
-
-    private static final String RATE_LIMIT_PREFIX = "rate_limit:";
-
-    public boolean isAllowed(String identifier, int maxRequests, int timeWindowMinutes) {
-        String key = RATE_LIMIT_PREFIX + identifier;
-
-        String currentCount = (String) redisTemplate.opsForValue().get(key);
-
-        if (currentCount == null) {
-            // First request
-            redisTemplate.opsForValue().set(key, "1", timeWindowMinutes, TimeUnit.MINUTES);
-            return true;
-        }
-
-        int count = Integer.parseInt(currentCount);
-        if (count < maxRequests) {
-            redisTemplate.opsForValue().increment(key);
-            return true;
-        }
-
-        return false; // Rate limit exceeded
-    }
-
-    public void resetLimit(String identifier) {
-        String key = RATE_LIMIT_PREFIX + identifier;
-        redisTemplate.delete(key);
-    }
-}
-```
-
-### 7. Update Controllers for Rate Limiting
-
-Add rate limiting to your authentication endpoints:
+### 1. Cache Key Design
 
 ```java
-// In your AuthController
-@RestController
-@RequestMapping("/auth")
-public class AuthController {
-
-    @Autowired
-    private RateLimitingService rateLimitingService;
-
-    @PostMapping("/user-varification/forget-password")
-    public ResponseEntity<?> forgetPassword(@RequestParam String email) {
-        // Rate limiting: 3 requests per hour per email
-        if (!rateLimitingService.isAllowed("forgot_password:" + email, 3, 60)) {
-            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-                .body("Too many password reset requests. Please try again later.");
-        }
-
-        // Your existing logic...
-    }
-
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestParam String email, @RequestParam String password) {
-        // Rate limiting: 5 login attempts per 15 minutes per IP
-        String clientIP = getClientIP(); // Implement this method
-        if (!rateLimitingService.isAllowed("login:" + clientIP, 5, 15)) {
-            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-                .body("Too many login attempts. Please try again later.");
-        }
-
-        // Your existing logic...
-    }
-}
-```
-
-## Performance Optimization Strategies
-
-### 1. Cache Strategies
-
-#### Cache-Aside Pattern
-
-```java
-public User getUserById(Long id) {
-    // Check cache first
-    User user = (User) redisTemplate.opsForValue().get("user:" + id);
-    if (user == null) {
-        // Cache miss - fetch from database
-        user = userRepository.findById(id).orElse(null);
-        if (user != null) {
-            // Store in cache
-            redisTemplate.opsForValue().set("user:" + id, user, Duration.ofMinutes(30));
-        }
-    }
-    return user;
-}
-```
-
-#### Write-Through Pattern
-
-```java
-public User saveUser(User user) {
-    // Save to database first
-    User savedUser = userRepository.save(user);
-
-    // Update cache
-    redisTemplate.opsForValue().set("user:" + savedUser.getId(), savedUser, Duration.ofMinutes(30));
-
-    return savedUser;
-}
-```
-
-#### Write-Behind Pattern
-
-```java
-@Async
-public void updateUserAsync(User user) {
-    // Update cache immediately
-    redisTemplate.opsForValue().set("user:" + user.getId(), user, Duration.ofMinutes(30));
-
-    // Update database asynchronously
-    userRepository.save(user);
-}
-```
-
-### 2. Optimizing Cache Keys
-
-```java
-public class CacheKeyGenerator {
+public class CacheKeyBuilder {
 
     public static String userKey(Long userId) {
         return "user:" + userId;
     }
 
-    public static String userEmailKey(String email) {
-        return "user:email:" + email;
+    public static String userProfileKey(Long userId) {
+        return "user:profile:" + userId;
     }
 
-    public static String userTasksKey(Long userId) {
-        return "user:" + userId + ":tasks";
-    }
-
-    public static String tasksByStatusKey(TaskStatus status) {
-        return "tasks:status:" + status.name();
-    }
-
-    public static String sessionKey(String sessionId) {
-        return "session:" + sessionId;
+    public static String searchResultKey(String query, String category) {
+        return "search:" + category + ":" + query.hashCode();
     }
 }
 ```
 
-### 3. Batch Operations
+### 2. Conditional Caching
 
 ```java
 @Service
-public class BatchCacheService {
+public class ProductService {
 
-    @Autowired
-    private RedisTemplate<String, Object> redisTemplate;
-
-    public void batchSetUsers(Map<Long, User> users) {
-        redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
-            users.forEach((id, user) -> {
-                redisTemplate.opsForValue().set("user:" + id, user, Duration.ofMinutes(30));
-            });
-            return null;
-        });
+    // Only cache if price is greater than 0
+    @Cacheable(value = "products", key = "#id", condition = "#id > 0")
+    public Product findById(Long id) {
+        return productRepository.findById(id).orElse(null);
     }
 
-    public List<User> batchGetUsers(List<Long> userIds) {
-        List<String> keys = userIds.stream()
-            .map(id -> "user:" + id)
-            .collect(Collectors.toList());
-
-        List<Object> results = redisTemplate.opsForValue().multiGet(keys);
-        return results.stream()
-            .map(obj -> (User) obj)
-            .filter(Objects::nonNull)
-            .collect(Collectors.toList());
+    // Cache unless result is null or empty
+    @Cacheable(value = "products", key = "#category",
+               unless = "#result == null or #result.isEmpty()")
+    public List<Product> findByCategory(String category) {
+        return productRepository.findByCategory(category);
     }
 }
 ```
 
-### 4. Cache Warming
-
-```java
-@Component
-public class CacheWarmer {
-
-    @Autowired
-    private UserService userService;
-
-    @Autowired
-    private TaskService taskService;
-
-    @EventListener(ApplicationReadyEvent.class)
-    public void warmUpCache() {
-        // Warm up frequently accessed data
-        warmUpUsers();
-        warmUpTasks();
-    }
-
-    private void warmUpUsers() {
-        // Load active users into cache
-        List<User> activeUsers = userRepository.findActiveUsers();
-        activeUsers.forEach(user -> {
-            userService.findById(user.getId()); // This will cache the user
-        });
-    }
-
-    private void warmUpTasks() {
-        // Load recent tasks into cache
-        Arrays.stream(TaskStatus.values()).forEach(status -> {
-            taskService.findTasksByStatus(status); // This will cache tasks by status
-        });
-    }
-}
-```
-
-## Best Practices
-
-### 1. Cache Naming Conventions
-
-- Use hierarchical naming: `user:123`, `user:123:tasks`
-- Include version numbers: `user:v1:123`
-- Use consistent separators (colon `:`)
-
-### 2. TTL (Time To Live) Strategy
-
-```java
-public enum CacheTTL {
-    SHORT(Duration.ofMinutes(5)),    // Frequently changing data
-    MEDIUM(Duration.ofMinutes(30)),  // User sessions, temporary data
-    LONG(Duration.ofHours(2)),       // User profiles, settings
-    VERY_LONG(Duration.ofHours(24)); // Static data, configurations
-
-    private final Duration duration;
-
-    CacheTTL(Duration duration) {
-        this.duration = duration;
-    }
-
-    public Duration getDuration() {
-        return duration;
-    }
-}
-```
-
-### 3. Cache Size Management
-
-```properties
-# Memory usage settings
-maxmemory 256mb
-maxmemory-policy allkeys-lru
-
-# Eviction settings
-lazyfree-lazy-eviction yes
-lazyfree-lazy-expire yes
-```
-
-### 4. Monitoring and Metrics
-
-```java
-@Component
-public class CacheMetrics {
-
-    @Autowired
-    private RedisTemplate<String, Object> redisTemplate;
-
-    @Scheduled(fixedRate = 60000) // Every minute
-    public void logCacheMetrics() {
-        RedisConnectionFactory factory = redisTemplate.getConnectionFactory();
-        RedisConnection connection = factory.getConnection();
-
-        Properties info = connection.info();
-        String usedMemory = info.getProperty("used_memory_human");
-        String connectedClients = info.getProperty("connected_clients");
-
-        log.info("Redis Metrics - Memory: {}, Clients: {}", usedMemory, connectedClients);
-
-        connection.close();
-    }
-}
-```
-
-### 5. Error Handling
+### 3. Error Handling
 
 ```java
 @Service
@@ -968,144 +186,611 @@ public class ResilientCacheService {
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
-    public Optional<Object> safeGet(String key) {
+    public Optional<User> getUserSafely(String key) {
         try {
-            return Optional.ofNullable(redisTemplate.opsForValue().get(key));
+            return Optional.ofNullable((User) redisTemplate.opsForValue().get(key));
         } catch (Exception e) {
-            log.error("Error getting cache key: {}", key, e);
+            System.err.println("Cache error: " + e.getMessage());
             return Optional.empty();
         }
     }
-
-    public boolean safeSet(String key, Object value, Duration ttl) {
-        try {
-            redisTemplate.opsForValue().set(key, value, ttl);
-            return true;
-        } catch (Exception e) {
-            log.error("Error setting cache key: {}", key, e);
-            return false;
-        }
-    }
 }
 ```
 
-### 6. Development vs Production Configuration
-
-**application-dev.properties:**
-
-```properties
-spring.data.redis.host=localhost
-spring.data.redis.port=6379
-spring.cache.redis.time-to-live=60000  # Shorter TTL for development
-```
-
-**application-prod.properties:**
-
-```properties
-spring.data.redis.host=${REDIS_HOST}
-spring.data.redis.port=${REDIS_PORT}
-spring.data.redis.password=${REDIS_PASSWORD}
-spring.cache.redis.time-to-live=600000  # Longer TTL for production
-```
-
-## Installation and Setup
-
-### Installing Redis
-
-#### Windows:
-
-1. Download Redis from: https://redis.io/download
-2. Or use Docker: `docker run -d -p 6379:6379 redis:alpine`
-
-#### Linux/macOS:
-
-```bash
-# Ubuntu/Debian
-sudo apt update
-sudo apt install redis-server
-
-# macOS with Homebrew
-brew install redis
-```
-
-### Starting Redis
-
-```bash
-# Start Redis server
-redis-server
-
-# Connect with Redis CLI
-redis-cli
-
-# Test connection
-ping  # Should return PONG
-```
-
-## Testing Your Implementation
-
-### 1. Unit Tests
+### 4. Cache Performance Monitoring
 
 ```java
-@SpringBootTest
-@TestPropertySource(properties = {
-    "spring.cache.type=simple" // Use simple cache for testing
-})
-class UserServiceTest {
+@Component
+public class CacheMonitor {
 
     @Autowired
-    private UserService userService;
+    private CacheManager cacheManager;
 
-    @MockBean
-    private UserRepository userRepository;
+    @EventListener
+    public void handleCacheGetEvent(CacheGetEvent event) {
+        System.out.println("Cache GET: " + event.getKey() + " from cache: " + event.getCacheName());
+    }
 
-    @Test
-    void testUserCaching() {
-        User user = new User();
-        user.setId(1L);
-        user.setEmail("test@example.com");
-
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-
-        // First call - should hit database
-        User result1 = userService.findById(1L);
-
-        // Second call - should hit cache
-        User result2 = userService.findById(1L);
-
-        // Verify repository was called only once
-        verify(userRepository, times(1)).findById(1L);
-        assertEquals(result1, result2);
+    @EventListener
+    public void handleCachePutEvent(CachePutEvent event) {
+        System.out.println("Cache PUT: " + event.getKey() + " to cache: " + event.getCacheName());
     }
 }
 ```
 
-### 2. Integration Tests
+---
+
+## Common Caching Patterns
+
+### 1. Cache-Aside Pattern
 
 ```java
-@SpringBootTest
-@Testcontainers
-class RedisIntegrationTest {
+@Service
+public class UserService {
 
-    @Container
-    static RedisContainer redis = new RedisContainer("redis:alpine")
-            .withExposedPorts(6379);
-
-    @DynamicPropertySource
-    static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.data.redis.host", redis::getHost);
-        registry.add("spring.data.redis.port", redis::getFirstMappedPort);
-    }
+    @Autowired
+    private UserRepository userRepository;
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
-    @Test
-    void testRedisConnection() {
-        redisTemplate.opsForValue().set("test", "value");
-        Object result = redisTemplate.opsForValue().get("test");
-        assertEquals("value", result);
+    public User findUserById(Long id) {
+        String key = "user:" + id;
+
+        // Check cache first
+        User user = (User) redisTemplate.opsForValue().get(key);
+
+        if (user == null) {
+            // Cache miss - fetch from database
+            user = userRepository.findById(id).orElse(null);
+
+            if (user != null) {
+                // Store in cache
+                redisTemplate.opsForValue().set(key, user, Duration.ofMinutes(30));
+            }
+        }
+
+        return user;
     }
 }
 ```
 
-This comprehensive guide should help you implement Redis caching in your Opus project effectively. Start with the basic setup and gradually implement more advanced features based on your specific needs.
+### 2. Write-Through Pattern
+
+```java
+@Service
+public class UserService {
+
+    @CachePut(value = "users", key = "#result.id")
+    public User saveUser(User user) {
+        // Save to database and update cache simultaneously
+        return userRepository.save(user);
+    }
+}
+```
+
+### 3. Write-Behind (Write-Back) Pattern
+
+```java
+@Service
+public class UserService {
+
+    @Async
+    @CachePut(value = "users", key = "#user.id")
+    public CompletableFuture<User> saveUserAsync(User user) {
+        // Update cache immediately, save to database asynchronously
+        User savedUser = userRepository.save(user);
+        return CompletableFuture.completedFuture(savedUser);
+    }
+}
+```
+
+---
+
+This comprehensive guide covers everything you need to know about caching in Spring Boot, from basic concepts to advanced Redis implementation. Start with simple examples and gradually implement more complex features as your application grows!Controller {
+
+    @Autowired
+    private UserService userService;
+
+    @GetMapping("/{id}")
+    public ResponseEntity<User> getUser(@PathVariable Long id) {
+        User user = userService.findById(id);
+        return user != null ? ResponseEntity.ok(user) : ResponseEntity.notFound().build();
+    }
+
+    @PostMapping
+    public ResponseEntity<User> createUser(@RequestBody User user) {
+        User savedUser = userService.save(user);
+        return ResponseEntity.ok(savedUser);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+        userService.deleteById(id);
+        return ResponseEntity.ok().build();
+    }
+
+}
+
+````
+
+### Testing Cache Behavior
+
+1. **First call** - Cache miss:
+   ```java
+   User user1 = userService.findById(1L);
+   // Console output: "Fetching user from database for ID: 1"
+   // Database query executed
+````
+
+2. **Second call** - Cache hit:
+
+   ```java
+   User user2 = userService.findById(1L);
+   // No console output from service method
+   // Result returned from cache instantly
+   ```
+
+3. **Update operation**:
+
+   ```java
+   user1.setName("Updated Name");
+   userService.save(user1);
+   // Console output: "Saving user to database: Updated Name"
+   // Cache updated with new data
+   ```
+
+4. **Delete operation**:
+   ```java
+   userService.deleteById(1L);
+   // Console output: "Deleting user from database with ID: 1"
+   // Cache entry removed
+   ```
+
+### Complete Example with Timing
+
+```java
+@Component
+public class CacheTestRunner implements CommandLineRunner {
+
+    @Autowired
+    private UserService userService;
+
+    @Override
+    public void run(String... args) throws Exception {
+        // Create test user
+        User user = new User("John Doe", "john@example.com", 25);
+        User savedUser = userService.save(user);
+        Long userId = savedUser.getId();
+
+        // Test 1: First call (cache miss)
+        long startTime = System.currentTimeMillis();
+        User result1 = userService.findById(userId);
+        long firstCallTime = System.currentTimeMillis() - startTime;
+        System.out.println("First call took: " + firstCallTime + "ms");
+
+        // Test 2: Second call (cache hit)
+        startTime = System.currentTimeMillis();
+        User result2 = userService.findById(userId);
+        long secondCallTime = System.currentTimeMillis() - startTime;
+        System.out.println("Second call took: " + secondCallTime + "ms");
+
+        System.out.println("Performance improvement: " +
+                          (firstCallTime - secondCallTime) + "ms");
+    }
+}
+```
+
+### Cache Configuration Options
+
+````java
+@Configuration
+@EnableCaching
+public class CacheConfig {
+
+    @Bean
+    public CacheManager cacheManager() {
+        ConcurrentMapCacheManager cacheManager = new ConcurrentMapCacheManager();
+
+        // Pre-configure cache names
+        cacheManager.setCacheNames(Arrays.asList("users", "products", "orders"));
+
+        // Allow dynamic cache creation
+        cacheManager.setAllowNullValues(false);
+
+        return cacheManager;
+    }
+
+    // Custom cache resolver (optional)
+    @Bean
+    public CacheResolver cacheResolver() {
+        return new SimpleCacheResolver(cacheManager());
+    }
+}
+```the books (cached data) are stored and can quickly retrieve them when needed.
+
+### Cache Flow Diagram
+
+````
+
+1. Method Called → 2. Check Cache → 3a. Cache Hit (Return cached data)
+   ↓
+   3b. Cache Miss → 4. Execute Method → 5. Store Result in Cache → 6. Return Result
+
+````
+
+### Understanding Cache Keys
+
+A cache key is like an address or label for your cached data. It must be unique for each piece of data you want to cache.
+
+Examples:
+- `user:123` - for user with ID 123
+- `product:laptop` - for laptop products
+- `weather:london:2024-08-04` - for London weather on a specific date
+
+### Key Caching Annotations
+
+1. **`@Cacheable`**:
+
+   - Saves the result of a method in the cache.
+   - If the method is called again with the same parameters, the cached result is returned.
+   - **When to use**: For read operations that fetch data
+   - Example:
+     ```java
+     @Cacheable(value = "users", key = "#id")
+     public User findById(Long id) {
+         System.out.println("Fetching user from database...");
+         return userRepository.findById(id).orElse(null);
+     }
+     ```
+   - **Explanation**:
+     - `value = "users"` creates a cache named "users"
+     - `key = "#id"` uses the method parameter `id` as the cache key
+     - First call with `id=1` fetches from database and caches the result
+     - Second call with `id=1` returns the cached result instantly
+
+2. **`@CachePut`**:
+
+   - Updates the cache with the method's return value.
+   - **When to use**: For update operations where you want to refresh the cache
+   - Example:
+     ```java
+     @CachePut(value = "users", key = "#user.id")
+     public User save(User user) {
+         User savedUser = userRepository.save(user);
+         return savedUser;
+     }
+     ```
+   - **Explanation**:
+     - Always executes the method (saves to database)
+     - Updates the cache with the new user data
+     - `#user.id` uses the id property of the user object as the key
+
+3. **`@CacheEvict`**:
+   - Removes entries from the cache.
+   - **When to use**: For delete operations or when data becomes invalid
+   - Example:
+     ```java
+     @CacheEvict(value = "users", key = "#id")
+     public void deleteById(Long id) {
+         userRepository.deleteById(id);
+     }
+
+     @CacheEvict(value = "users", allEntries = true)
+     public void clearAllUsers() {
+         // This removes all entries from the "users" cache
+     }
+     ```
+
+### Advanced Cache Key Expressions
+
+Spring Boot uses SpEL (Spring Expression Language) for cache keys:
+
+```java
+// Using method parameters
+@Cacheable(value = "users", key = "#id")
+public User findById(Long id) { ... }
+
+// Using object properties
+@Cacheable(value = "orders", key = "#order.customerId")
+public Order processOrder(Order order) { ... }
+
+// Using multiple parameters
+@Cacheable(value = "search", key = "#query + ':' + #category")
+public List<Product> searchProducts(String query, String category) { ... }
+
+// Using method name as part of key
+@Cacheable(value = "data", key = "#root.methodName + ':' + #id")
+public Data findData(Long id) { ... }
+
+// Conditional caching
+@Cacheable(value = "users", key = "#id", condition = "#id > 0")
+public User findById(Long id) { ... }
+
+// Cache unless result is null
+@Cacheable(value = "users", key = "#id", unless = "#result == null")
+public User findById(Long id) { ... }
+```ory. Instead of searching the directory every time, you write the number down and keep it handy. That's caching! It saves time and resources by avoiding repeated operations.
+
+In software, caching works similarly. When you request data, it can be stored temporarily in memory or an external system. The next time you request the same data, it's served from the cache instead of performing the operation again.
+
+### Real-World Caching Examples
+
+1. **Web Browser Cache**: When you visit a website, your browser saves images, CSS, and JavaScript files locally. The next time you visit the same site, it loads faster because these files are served from your local cache.
+
+2. **CPU Cache**: Your computer's processor has multiple levels of cache (L1, L2, L3) that store frequently used data closer to the CPU for faster access.
+
+3. **CDN (Content Delivery Network)**: Services like Cloudflare cache website content in servers around the world, so users can access content from a server closer to them.
+
+### Types of Caching
+
+1. **In-Memory Caching**: Data is stored in the application's memory (RAM).
+   - **Pros**: Very fast access
+   - **Cons**: Limited by available memory, data is lost when application restarts
+
+2. **Distributed Caching**: Data is stored in external systems like Redis or Memcached.
+   - **Pros**: Shared across multiple application instances, persistent
+   - **Cons**: Network latency, additional infrastructure
+
+3. **Database Caching**: Database systems have their own caching mechanisms.
+   - **Pros**: Automatic optimization
+   - **Cons**: Limited control over what gets cachedn Spring Boot: A Beginner's Guide
+
+Caching is a technique used to store frequently accessed data temporarily so that future requests for the same data can be served faster. In Spring Boot, caching is simple to implement and can significantly improve the performance of your application.
+
+---
+
+## What is Caching?
+
+Imagine you’re looking up a phone number in a directory. Instead of searching the directory every time, you write the number down and keep it handy. That’s caching! It saves time and resources by avoiding repeated operations.
+
+In software, caching works similarly. When you request data, it can be stored temporarily in memory or an external system. The next time you request the same data, it’s served from the cache instead of performing the operation again.
+
+---
+
+## Why Use Caching?
+
+Caching is useful because:
+
+- **Improves Performance**: Reduces the time taken to fetch data.
+- **Reduces Load**: Minimizes database queries and computational overhead.
+- **Enhances Scalability**: Handles more requests efficiently.
+
+### Performance Impact Example
+
+Let's say you have an e-commerce website:
+
+**Without Caching**:
+- User searches for "laptop" → Database query takes 200ms
+- 1000 users search for "laptop" → 1000 × 200ms = 200 seconds of database work
+- Database gets overwhelmed with repeated queries
+
+**With Caching**:
+- First user searches for "laptop" → Database query takes 200ms, result cached
+- Next 999 users search for "laptop" → Each request takes 5ms from cache
+- Total time: 200ms + (999 × 5ms) = 5.2 seconds
+- Database load reduced by 99.9%
+
+### When to Use Caching
+
+✅ **Good for caching**:
+- Data that doesn't change frequently (user profiles, product catalogs)
+- Expensive computations (complex calculations, reports)
+- External API responses (weather data, exchange rates)
+- Database query results that are accessed repeatedly
+
+❌ **Not good for caching**:
+- Data that changes very frequently (stock prices, live sports scores)
+- Highly personalized data that's unique to each user
+- Sensitive data that shouldn't be stored in memory
+
+---
+
+## How Caching Works in Spring Boot
+
+Spring Boot provides a simple way to implement caching using annotations. Here’s how it works:
+
+### Key Caching Annotations
+
+1. **`@Cacheable`**:
+
+   - Saves the result of a method in the cache.
+   - If the method is called again with the same parameters, the cached result is returned.
+   - Example:
+     ```java
+     @Cacheable(value = "users", key = "#id")
+     public User findById(Long id) {
+         System.out.println("Fetching user from database...");
+         return userRepository.findById(id).orElse(null);
+     }
+     ```
+
+2. **`@CachePut`**:
+
+   - Updates the cache with the method’s return value.
+   - Example:
+     ```java
+     @CachePut(value = "users", key = "#user.id")
+     public User save(User user) {
+         return userRepository.save(user);
+     }
+     ```
+
+3. **`@CacheEvict`**:
+   - Removes entries from the cache.
+   - Example:
+     ```java
+     @CacheEvict(value = "users", key = "#id")
+     public void deleteById(Long id) {
+         userRepository.deleteById(id);
+     }
+     ```
+
+---
+
+## Setting Up Caching in Spring Boot
+
+### Step 1: Add Dependencies
+
+Add the Spring Boot Cache Starter to your `pom.xml`:
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-cache</artifactId>
+</dependency>
+````
+
+### Step 2: Enable Caching
+
+Annotate your configuration class with `@EnableCaching`:
+
+```java
+@Configuration
+@EnableCaching
+public class CacheConfig {
+
+    // Optional: Configure cache manager
+    @Bean
+    public CacheManager cacheManager() {
+        // By default, Spring Boot uses ConcurrentMapCacheManager for in-memory caching
+        return new ConcurrentMapCacheManager("users", "products", "orders");
+    }
+}
+```
+
+### Step 3: Create Your Entity
+
+```java
+@Entity
+public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String name;
+    private String email;
+    private int age;
+
+    // Constructors, getters, setters
+    public User() {}
+
+    public User(String name, String email, int age) {
+        this.name = name;
+        this.email = email;
+        this.age = age;
+    }
+
+    // getters and setters...
+}
+```
+
+### Step 4: Create Repository
+
+```java
+@Repository
+public interface UserRepository extends JpaRepository<User, Long> {
+    Optional<User> findByEmail(String email);
+    List<User> findByAgeGreaterThan(int age);
+}
+```
+
+### Step 5: Use Caching Annotations in Service
+
+````java
+@Service
+public class UserService {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Cacheable(value = "users", key = "#id")
+    public User findById(Long id) {
+        System.out.println("Fetching user from database for ID: " + id);
+        return userRepository.findById(id).orElse(null);
+    }
+
+    @Cacheable(value = "users", key = "#email")
+    public User findByEmail(String email) {
+        System.out.println("Fetching user from database for email: " + email);
+        return userRepository.findByEmail(email).orElse(null);
+    }
+
+    @CachePut(value = "users", key = "#result.id")
+    public User save(User user) {
+        System.out.println("Saving user to database: " + user.getName());
+        return userRepository.save(user);
+    }
+
+    @CacheEvict(value = "users", key = "#id")
+    public void deleteById(Long id) {
+        System.out.println("Deleting user from database with ID: " + id);
+        userRepository.deleteById(id);
+    }
+
+    @CacheEvict(value = "users", allEntries = true)
+    public void clearAllUsersCache() {
+        System.out.println("Clearing all users from cache");
+    }
+
+    // Method demonstrating complex caching
+    @Cacheable(value = "user-stats", key = "#minAge + ':' + #maxAge")
+    public List<User> findUsersByAgeRange(int minAge, int maxAge) {
+        System.out.println("Fetching users from database for age range: " + minAge + "-" + maxAge);
+        return userRepository.findByAgeGreaterThan(minAge)
+                           .stream()
+                           .filter(user -> user.getAge() <= maxAge)
+                           .collect(Collectors.toList());
+    }
+}
+
+---
+
+## Testing Caching
+
+Here’s how caching works in practice:
+
+1. Call the method for the first time:
+
+   ```java
+   User user1 = userService.findById(1); // Fetches from database
+````
+
+2. Call the method again with the same parameter:
+   ```java
+   User user2 = userService.findById(1); // Returns cached result
+   ```
+
+---
+
+## Transitioning to Redis for Caching
+
+If your app grows and you need caching that works across multiple servers, you can use Redis. Redis is a fast, in-memory database that’s perfect for caching.
+
+### Step 1: Add Redis Dependencies
+
+Add the following dependencies to your `pom.xml`:
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-redis</artifactId>
+</dependency>
+```
+
+### Step 2: Configure Redis
+
+Update your `application.properties`:
+
+```properties
+spring.data.redis.host=localhost
+spring.data.redis.port=6379
+spring.cache.type=redis
+```
+
+### Step 3: Use Redis for Caching
+
+Redis will automatically replace the default in-memory cache. You don’t need to change your code!
+
+---
+
+This guide provides a simple introduction to caching in Spring Boot, starting with in-memory caching and transitioning to Redis. Let me know if you need more examples or details!

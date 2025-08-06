@@ -1,5 +1,6 @@
 package org.arkadipta.opus.config;
 
+import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -15,6 +16,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
 
 @Configuration
+@EnableCaching
 public class SpringSecurityConfig {
 
         @Bean
@@ -46,7 +48,9 @@ public class SpringSecurityConfig {
                 // Allow requests from React frontend
                 configuration.setAllowedOriginPatterns(Arrays.asList(
                                 "http://localhost:3000",
+                                "http://localhost:5173",
                                 "http://127.0.0.1:3000",
+                                "http://127.0.0.1:5500",
                                 "https://*.netlify.app",
                                 "https://*.vercel.app",
                                 "https://*.herokuapp.com",

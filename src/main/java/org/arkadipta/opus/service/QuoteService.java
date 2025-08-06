@@ -1,5 +1,6 @@
 package org.arkadipta.opus.service;
 
+import jakarta.persistence.Cacheable;
 import org.arkadipta.opus.dto.QuoteResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,6 +21,7 @@ public class QuoteService {
     private String apiKey;
 
     private final String API_URL = "https://api.api-ninjas.com/v1/quotes";
+
 
     public QuoteResponse getRandomQuote() {
         try {
