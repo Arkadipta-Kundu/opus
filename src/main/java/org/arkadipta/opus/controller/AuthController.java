@@ -1,14 +1,25 @@
 package org.arkadipta.opus.controller;
 
+import jakarta.validation.Valid;
+import org.arkadipta.opus.dto.JwtResponse;
+import org.arkadipta.opus.dto.LoginRequest;
+import org.arkadipta.opus.dto.RefreshTokenRequest;
 import org.arkadipta.opus.entity.User;
 import org.arkadipta.opus.repository.UserRepository;
 import org.arkadipta.opus.service.EmailService;
+import org.arkadipta.opus.service.UserDetailsServiceImpl;
 import org.arkadipta.opus.service.UserService;
+import org.arkadipta.opus.util.JwtUtil;
 import org.arkadipta.opus.util.OtpUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -42,6 +53,15 @@ public class AuthController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private JwtUtil jwtUtil;
+
+    @Autowired
+    private AuthenticationManager authenticationManager;
+
+    @Autowired
+    private UserDetailsServiceImpl userDetailsService;
+
     /**
      * Create a new user.
      *
@@ -58,17 +78,81 @@ public class AuthController {
     }
 
     @PostMapping("/user-varification/login")
-    public ResponseEntity<Boolean> login(@RequestParam String userName, String password) {
-        User user = userRepository.findByUserName(userName);
-        if (user == null) {
-            return new ResponseEntity<>(false, HttpStatus.BAD_REQUEST);
-        }
-        String userPassFromDb = user.getPassword();
+    public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
+        try {
+            // Authenticate user
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            loginRequest.getUsername(),
+                            loginRequest.getPassword()
+                    )
+            );
 
-        if (passwordEncoder.matches(password, userPassFromDb)) {
-            return new ResponseEntity<>(true, HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(false, HttpStatus.BAD_REQUEST);
+            // Get user details
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            User user = userRepository.findByUserName(userDetails.getUsername());
+
+            // Generate tokens
+            Map<String, Object> claims = new HashMap<>();
+            claims.put("userId", user.getId());
+            claims.put("email", user.getEmail());
+            claims.put("roles", user.getRoles());
+
+            String jwt = jwtUtil.generateToken(userDetails.getUsername(), claims);
+            String refreshToken = jwtUtil.generateRefreshToken(userDetails.getUsername());
+
+            // Prepare response
+            JwtResponse jwtResponse = new JwtResponse();
+            jwtResponse.setToken(jwt);
+            jwtResponse.setRefreshToken(refreshToken);
+            jwtResponse.setUsername(user.getUserName());
+            jwtResponse.setEmail(user.getEmail());
+            jwtResponse.setRoles(user.getRoles());
+            jwtResponse.setExpiresIn(86400L); // 24 hours in seconds
+
+            return ResponseEntity.ok(jwtResponse);
+
+        } catch (BadCredentialsException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Invalid username or password"));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", "Authentication failed: " + e.getMessage()));
+        }
+    }
+    @PostMapping("/user-varification/refresh")
+    public ResponseEntity<?> refreshToken(@Valid @RequestBody RefreshTokenRequest refreshRequest) {
+        try {
+            String refreshToken = refreshRequest.getRefreshToken();
+
+            // Validate refresh token
+            if (!jwtUtil.validateToken(refreshToken) || !jwtUtil.isRefreshToken(refreshToken)) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Invalid refresh token"));
+            }
+
+            // Extract username and generate new access token
+            String username = jwtUtil.extractUsername(refreshToken);
+            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            User user = userRepository.findByUserName(username);
+
+            // Generate a new access token
+            Map<String, Object> claims = new HashMap<>();
+            claims.put("userId", user.getId());
+            claims.put("email", user.getEmail());
+            claims.put("roles", user.getRoles());
+
+            String newAccessToken = jwtUtil.generateToken(username, claims);
+
+            return ResponseEntity.ok(Map.of(
+                    "token", newAccessToken,
+                    "type", "Bearer",
+                    "expiresIn", 86400L
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Token refresh failed: " + e.getMessage()));
         }
     }
 
