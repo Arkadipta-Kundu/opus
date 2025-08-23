@@ -1066,7 +1066,32 @@ export MAIL_PASSWORD=your-app-password
 
 ## 🚀 Deployment
 
-### Docker Deployment (Recommended)
+### Azure Deployment (Recommended for Production) ☁️
+
+For cloud deployment, we provide comprehensive Azure App Service deployment:
+
+**Quick Start:**
+
+```bash
+# For Linux/Mac users
+chmod +x deploy-to-azure.sh
+./deploy-to-azure.sh
+
+# For Windows users
+deploy-to-azure.bat
+```
+
+**Manual Deployment:**
+See the detailed [Azure Deployment Guide](AZURE_DEPLOYMENT_GUIDE.md) for:
+
+- Step-by-step Azure App Service deployment
+- Azure Container Instances deployment
+- Environment configuration
+- Security best practices
+- Scaling and monitoring setup
+- Cost optimization strategies
+
+### Docker Deployment
 
 Create a `Dockerfile`:
 
