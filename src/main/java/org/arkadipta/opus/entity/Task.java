@@ -41,5 +41,5 @@ public class Task {
     private Boolean reminderSent = false; // Whether a reminder email was already sent
 
     @Column(name = "reminder_email")
-    private String reminderEmail; // Email to send a reminder to (optional, can use user's email)
+    private String reminderEmail; // Email to send ;a reminder to (optional, can use user's email)
 }
